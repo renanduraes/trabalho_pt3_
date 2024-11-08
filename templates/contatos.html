@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contatos de Emergência - Estado</title>
+    <link rel="stylesheet" href="/static/css/contato.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>Contatos de Emergência</h1>
+    <div id="contactDetails" class="contact-info"></div>
+    <button class="back-button" onclick="goBack()">Voltar</button>
+</div>
+
+<!-- Botão flutuante -->
+<button class="floating-btn" onclick="openModal()">+</button>
+
+<!-- Modal para enviar nova solicitação -->
+<div id="contactModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <h2>Adicionar nova Instituição</h2>
+        <form id="contactForm">
+            <input type="text" id="state" name="state" placeholder="Estado" readonly>
+            <input type="text" id="instituicao" name="instituicao" placeholder="Nome da Instituição" required>
+            <input type="text" id="telefone" name="telefone" placeholder="Telefone" required>
+            <input type="text" id="area" name="area" placeholder="Área de Atuação" required>
+            <textarea id="historia" name="historia" rows="4" placeholder="História da Instituição" required></textarea>
+            <button type="submit">Enviar</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Função para obter o estado da URL
+    function getQueryParameter(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name);
+    }
+
+    // Função para exibir os contatos de emergência
+    function showContacts() {
+        const state = getQueryParameter('estado');
+        if (state) {
+            document.getElementById('state').value = state; // Preenche o campo de estado
+        }
+
+        fetch(`/api/contatos/${state}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('contactDetails').innerHTML = `<p>${data.error}</p>`;
+                } else {
+                    // Se data for uma lista, exibir todas as instituições
+                    let contactsHTML = '';
+                    data.forEach(contato => {
+                        contactsHTML += `
+                            <div class="contact-item">
+                                <h2>${contato.instituicao}</h2>
+                                <p><strong>Telefone:</strong> ${contato.telefone}</p>
+                                <p><strong>Área de atuação:</strong> ${contato.area}</p>
+                                <p><strong>História:</strong> ${contato.historia}</p>
+                            </div>
+                            <hr>
+                        `;
+                    });
+                    document.getElementById('contactDetails').innerHTML = contactsHTML;
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao buscar contatos:', error);
+            });
+    }
+
+    // Função para abrir o modal
+    function openModal() {
+        document.getElementById('contactModal').style.display = 'block';
+    }
+
+    // Função para fechar o modal
+    function closeModal() {
+        document.getElementById('contactModal').style.display = 'none';
+    }
+
+    // Função para voltar à página anterior
+    function goBack() {
+        window.history.back();
+    }
+
+    // Função para enviar o formulário de solicitação de contato
+    document.getElementById('contactForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const state = document.getElementById('state').value;
+        const instituicao = document.getElementById('instituicao').value;
+        const telefone = document.getElementById('telefone').value;
+        const area = document.getElementById('area').value;
+        const historia = document.getElementById('historia').value;
+
+        // Fazer uma requisição POST para enviar os dados ao backend
+        fetch('/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                estado: state,
+                instituicao: instituicao,
+                telefone: telefone,
+                area: area,
+                historia: historia
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert('Contato enviado com sucesso!');
+                closeModal(); // Fechar o modal após o envio
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao enviar contato:', error);
+        });
+    });
+
+    window.onload = showContacts;
+</script>
+
+</body>
+</html>
